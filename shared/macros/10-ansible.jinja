@@ -985,6 +985,14 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
 
 {{{ ansible_check_authselect_presence() }}}
 
+- name: {{{ rule_title }}} - Set /etc/pam.d/ path facts
+  set_fact:
+    {{% if 'ubuntu' in product %}}
+    pam_path: ['/etc/pam.d/common-auth']
+    {{% else %}}
+    pam_path: ['/etc/pam.d/system-auth', '/etc/pam.d/password-auth']
+    {{% endif %}}
+
 - name: {{{ rule_title }}} - Remediation where authselect tool is present
   block:
     {{{ ansible_enable_authselect_feature('with-faillock') | indent(4) }}}
@@ -1016,16 +1024,11 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         insertbefore: ^auth.*sufficient.*pam_unix\.so.*
         {{% endif %}}
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_is_enabled.found == 0
-    {{% if 'ubuntu' not in product %}}
+
+    {{% if 'ubuntu' in product %}}
     - name: {{{ rule_title }}} - Enable pam_faillock.so authsucc editing PAM files
       ansible.builtin.lineinfile:
         path: /etc/pam.d/common-auth
@@ -1046,13 +1049,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         {{% endif %}}
         insertbefore: ^auth.*required.*pam_deny\.so.*
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_is_enabled.found == 0
 
@@ -1063,9 +1060,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         line: account     required      pam_faillock.so
         insertbefore: ^account.*required.*pam_unix\.so.*
         state: present
-      loop:
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_is_enabled.found == 0
     {{% endif %}}
@@ -1092,6 +1087,14 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
 {{%- if faillock_var_name != '' %}}
 {{{ ansible_instantiate_variables( faillock_var_name ) }}}
 {{%- endif %}}
+
+- name: {{{ rule_title }}} - Set /etc/pam.d/ path facts
+  set_fact:
+    {{% if 'ubuntu' in product %}}
+    pam_path: ['/etc/pam.d/common-auth']
+    {{% else %}}
+    pam_path: ['/etc/pam.d/system-auth', '/etc/pam.d/password-auth']
+    {{% endif %}}
 
 - name: {{{ rule_title }}} - Check the presence of /etc/security/faillock.conf file
   ansible.builtin.stat:
@@ -1150,13 +1153,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         line: \1required\3 {{{ parameter }}}={{ {{{ faillock_var_name }}} }}
         {{%- endif %}}
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_{{{ parameter }}}_parameter_is_present.found == 0
 
@@ -1172,13 +1169,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         line: \1required\3 {{{ parameter }}}={{ {{{ faillock_var_name }}} }}
         {{%- endif %}}
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_{{{ parameter }}}_parameter_is_present.found == 0
     {{%- endif %}}
@@ -1191,13 +1182,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)({{{ parameter }}})=[0-9]+(.*)
         line: \1required\3\4={{ {{{ faillock_var_name }}} }}\5
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_{{{ parameter }}}_parameter_is_present.found > 0
 
@@ -1209,13 +1194,7 @@ The following macro remediates Audit syscall rule in :code:`/etc/audit/audit.rul
         regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)({{{ parameter }}})=[0-9]+(.*)
         line: \1required\3\4={{ {{{ faillock_var_name }}} }}\5
         state: present
-      loop:
-        {{% if 'ubuntu' in product %}}
-        - /etc/pam.d/common-auth
-        {{% else %}}
-        - /etc/pam.d/system-auth
-        - /etc/pam.d/password-auth
-        {{% endif %}}
+      loop: '{{ pam_path }}'
       when:
         - result_pam_faillock_{{{ parameter }}}_parameter_is_present.found > 0
     {{%- endif %}}
